@@ -24,6 +24,9 @@ class FlashcardApp {
     }
 
     init() {
+        // Initialize admin account on first load
+        StorageService.initializeAdminAccount();
+        
         // Check if user already logged in
         const user = StorageService.getCurrentUser();
         if (user) {

@@ -5,6 +5,23 @@ export class StorageService {
     static USERS_KEY = 'flashcard_users';
     static CURRENT_USER_KEY = 'flashcard_current_user';
 
+    // Initialize admin account on first load
+    static initializeAdminAccount() {
+        const users = this.getAllUsers();
+        const adminExists = users.find(u => u.username === 'admin-laiphuong4953');
+        
+        if (!adminExists) {
+            const adminUser = {
+                username: 'admin-laiphuong4953',
+                password: 'laiphuong4953',
+                role: 'admin',
+                createdAt: new Date().toISOString()
+            };
+            users.push(adminUser);
+            localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
+        }
+    }
+
     // User Authentication
     static registerUser(username, password, isAdmin = false) {
         const users = this.getAllUsers();
