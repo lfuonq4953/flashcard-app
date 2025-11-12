@@ -19,16 +19,16 @@ export class Login {
                         <button class="tab-btn" id="register-tab">Register</button>
                     </div>
 
-                    <!-- Login Form (with Admin Account suggested) -->
+                    <!-- Login Form -->
                     <form id="login-form" class="login-tab-content">
                         <div class="form-group">
                             <label for="username">Username</label>
-                            <input type="text" id="username" placeholder="admin-laiphuong4953" value="admin-laiphuong4953" required>
+                            <input type="text" id="username" placeholder="Enter your username" required>
                         </div>
 
                         <div class="form-group">
                             <label for="password">Password</label>
-                            <input type="password" id="password" placeholder="laiphuong4953" value="laiphuong4953" required>
+                            <input type="password" id="password" placeholder="Enter your password" required>
                         </div>
 
                         <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">
@@ -59,7 +59,7 @@ export class Login {
                     </form>
 
                     <div style="margin-top: 20px; text-align: center; color: rgba(255,255,255,0.7);">
-                        <p style="font-size: 0.9rem;">� Mặc định dùng Admin Account (hoặc tạo tài khoản mới)</p>
+                        <p style="font-size: 0.9rem;">💡 Đăng nhập hoặc tạo tài khoản mới</p>
                     </div>
                 </div>
             </div>
