@@ -1,4 +1,5 @@
 import { StorageService } from './storage.js';
+import { ThemeManager } from './theme.js';
 import { Login } from './components/Login.js';
 import { DeckList } from './components/DeckList.js';
 import { StudyMode } from './components/StudyMode.js';
@@ -9,6 +10,9 @@ import { AdminDashboard } from './components/AdminDashboard.js';
 
 class FlashcardApp {
     constructor() {
+        // Initialize theme manager first
+        this.themeManager = new ThemeManager();
+        
         this.loginContainer = document.getElementById('login');
         this.deckListContainer = document.getElementById('deck-list');
         this.studyModeContainer = document.getElementById('study-mode');
