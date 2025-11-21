@@ -1,103 +1,219 @@
-import { Celebration } from './Celebration.js';
+// js/components/StudyMode.js
+export default class StudyMode {
+  constructor(storageService) {
+    this.storageService = storageService;
+    this.currentDeck = null;
+    this.currentCardIndex = 0;
+    this.isFlipped = false;
+    this.audioPlayer = new Audio(); // Audio player
+    this.autoPlay = false;
+  }
 
-export class StudyMode {
-    constructor(container, deck, onExit, onUpdateCard, onShowQuizMode) {
-        this.container = container;
-        this.deck = deck;
-        this.onExit = onExit;
-        this.onUpdateCard = onUpdateCard;
-        this.onShowQuizMode = onShowQuizMode;
-        this.currentIndex = 0;
-        this.isFlipped = false;
+  render(deckId) {
+    const decks = this.storageService.getDecks();
+    this.currentDeck = decks.find(d => d.id === deckId);
+    
+    if (!this.currentDeck || this.currentDeck.cards.length === 0) {
+      return '<div class="empty-state">No cards to study!</div>';
     }
 
-    render() {
-        const card = this.deck.cards[this.currentIndex];
-        const progress = ((this.currentIndex + 1) / this.deck.cards.length) * 100;
+    this.currentCardIndex = 0;
+    this.isFlipped = false;
+    
+    return this.renderCard();
+  }
 
-        this.container.innerHTML = `
-            <div class="study-header">
-                <button class="btn" id="exit-study">⬅️ Back to Decks</button>
-                <h2 style="color: white;">${this.deck.name}</h2>
-                <button class="btn" id="switch-quiz-mode" style="margin-left: auto;">❓ Quiz Mode</button>
-            </div>
-            
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: ${progress}%"></div>
-            </div>
-            
-            <p style="color: white; text-align: center;">Card ${this.currentIndex + 1} of ${this.deck.cards.length}</p>
-
-            <div class="flashcard-container">
-                <div class="flashcard" id="flashcard">
-                    <div class="card-face card-front">
-                        <div class="card-word">${card.front}</div>
-                        <p style="opacity: 0.8;">Click to flip</p>
-                    </div>
-                    <div class="card-face card-back">
-                        <div class="card-word">${card.back}</div>
-                        ${card.example ? `<div class="card-example">"${card.example}"</div>` : ''}
-                    </div>
+  renderCard() {
+    const card = this.currentDeck.cards[this.currentCardIndex];
+    const progress = ((this.currentCardIndex + 1) / this.currentDeck.cards.length) * 100;
+    const masteredCount = this.currentDeck.cards.filter(c => c.mastered).length;
+    
+    // Kiểm tra có sound không
+    const hasSound = card.soundData || card.soundUrl;
+    
+    return `
+      <div class="study-container">
+        <div class="study-header">
+          <button class="btn-back" onclick="app.showDeckList()">← Back</button>
+          <h2>${this.currentDeck.name}</h2>
+          <div class="study-stats">
+            <span>${this.currentCardIndex + 1} / ${this.currentDeck.cards.length}</span>
+            <span>✓ ${masteredCount} mastered</span>
+          </div>
+        </div>
+        
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${progress}%"></div>
+        </div>
+        
+        <div class="flashcard-wrapper">
+          <div class="flashcard ${this.isFlipped ? 'flipped' : ''}" 
+               onclick="studyMode.flip()">
+            <div class="flashcard-front">
+              <div class="card-content">
+                <div class="card-word-container">
+                  <h3 class="card-word">${card.front}</h3>
+                  ${hasSound ? `
+                    <button class="btn-sound-inline" 
+                            onclick="event.stopPropagation(); studyMode.playSound();"
+                            title="Play pronunciation">
+                      🔊
+                    </button>
+                  ` : ''}
                 </div>
+                ${card.example ? `<p class="card-example">"${card.example}"</p>` : ''}
+              </div>
+              <div class="flip-hint">Click to see meaning</div>
             </div>
-
-            <div class="study-controls">
-                <button class="btn" id="prev-card" ${this.currentIndex === 0 ? 'disabled' : ''}>⬅️ Previous</button>
-                <button class="btn ${card.mastered ? 'btn-secondary' : ''}" id="toggle-mastered">
-                    ${card.mastered ? '✅ Mastered' : '📝 Mark as Mastered'}
-                </button>
-                <button class="btn" id="next-card" ${this.currentIndex === this.deck.cards.length - 1 ? 'disabled' : ''}>Next ➡️</button>
+            
+            <div class="flashcard-back">
+              <div class="card-content">
+                <div class="card-word-container">
+                  <h3 class="card-translation">${card.back}</h3>
+                  ${hasSound ? `
+                    <button class="btn-sound-inline" 
+                            onclick="event.stopPropagation(); studyMode.playSound();"
+                            title="Play pronunciation">
+                      🔊
+                    </button>
+                  ` : ''}
+                </div>
+                ${card.example ? `<p class="card-example">"${card.example}"</p>` : ''}
+              </div>
+              <div class="flip-hint">Click to hide</div>
             </div>
-        `;
-
-        this.attachEventListeners();
-    }
-
-    attachEventListeners() {
-        const flashcard = document.getElementById('flashcard');
-        flashcard.addEventListener('click', () => {
-            this.isFlipped = !this.isFlipped;
-            flashcard.classList.toggle('flipped');
-        });
-
-        document.getElementById('exit-study')?.addEventListener('click', () => this.onExit());
+          </div>
+        </div>
         
-        document.getElementById('switch-quiz-mode')?.addEventListener('click', () => {
-            if (this.onShowQuizMode) {
-                this.onShowQuizMode();
-            }
-        });
+        <div class="study-controls">
+          <button class="btn-nav" 
+                  onclick="studyMode.previousCard()"
+                  ${this.currentCardIndex === 0 ? 'disabled' : ''}>
+            ← Previous
+          </button>
+          
+          <button class="btn-mastered ${card.mastered ? 'mastered' : ''}"
+                  onclick="studyMode.toggleMastered()">
+            ${card.mastered ? '✓ Mastered' : 'Mark as Mastered'}
+          </button>
+          
+          <button class="btn-nav" 
+                  onclick="studyMode.nextCard()"
+                  ${this.currentCardIndex === this.currentDeck.cards.length - 1 ? 'disabled' : ''}>
+            Next →
+          </button>
+        </div>
         
-        document.getElementById('prev-card')?.addEventListener('click', () => {
-            if (this.currentIndex > 0) {
-                this.currentIndex--;
-                this.isFlipped = false;
-                this.render();
-            }
-        });
+        ${hasSound ? `
+          <div class="study-options">
+            <label class="checkbox-label">
+              <input type="checkbox" 
+                     id="autoplay-sound" 
+                     ${this.autoPlay ? 'checked' : ''}
+                     onchange="studyMode.toggleAutoPlay(this.checked)">
+              <span>🔊 Auto-play pronunciation</span>
+            </label>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
 
-        document.getElementById('next-card')?.addEventListener('click', () => {
-            if (this.currentIndex < this.deck.cards.length - 1) {
-                this.currentIndex++;
-                this.isFlipped = false;
-                this.render();
-            }
-        });
+  flip() {
+    this.isFlipped = !this.isFlipped;
+    document.querySelector('.flashcard').classList.toggle('flipped');
+  }
 
-        document.getElementById('toggle-mastered')?.addEventListener('click', () => {
-            const card = this.deck.cards[this.currentIndex];
-            const wasNotMastered = !card.mastered;
-            
-            card.mastered = !card.mastered;
-            this.onUpdateCard(this.deck.id, card.id, card.mastered);
-            
-            // Trigger celebration only when marking as mastered (not when unmarking)
-            if (wasNotMastered) {
-                Celebration.celebrate();
-                Celebration.celebrateWithEmojis();
-            }
-            
-            this.render();
-        });
+  nextCard() {
+    if (this.currentCardIndex < this.currentDeck.cards.length - 1) {
+      this.currentCardIndex++;
+      this.isFlipped = false;
+      this.updateView();
+      
+      // Auto-play nếu được bật
+      if (this.autoPlay) {
+        setTimeout(() => this.playSound(), 300);
+      }
     }
+  }
+
+  previousCard() {
+    if (this.currentCardIndex > 0) {
+      this.currentCardIndex--;
+      this.isFlipped = false;
+      this.updateView();
+      
+      // Auto-play nếu được bật
+      if (this.autoPlay) {
+        setTimeout(() => this.playSound(), 300);
+      }
+    }
+  }
+
+  toggleMastered() {
+    const card = this.currentDeck.cards[this.currentCardIndex];
+    card.mastered = !card.mastered;
+    
+    this.storageService.updateCardMastery(
+      this.currentDeck.id,
+      card.id,
+      card.mastered
+    );
+    
+    this.updateView();
+  }
+
+  toggleAutoPlay(checked) {
+    this.autoPlay = checked;
+    if (checked) {
+      this.playSound();
+    }
+  }
+
+  // PHÁT SOUND
+  playSound() {
+    const card = this.currentDeck.cards[this.currentCardIndex];
+    
+    if (!card.soundData && !card.soundUrl) {
+      console.log('No sound available for this card');
+      return;
+    }
+    
+    try {
+      // Dừng audio đang phát
+      this.audioPlayer.pause();
+      this.audioPlayer.currentTime = 0;
+      
+      // Phát sound từ base64 data
+      if (card.soundData) {
+        this.audioPlayer.src = card.soundData;
+      } 
+      // Hoặc từ URL (nếu lưu file riêng)
+      else if (card.soundUrl) {
+        this.audioPlayer.src = `sounds/${card.soundUrl}`;
+      }
+      
+      // Phát âm thanh
+      this.audioPlayer.play().catch(error => {
+        console.error('Error playing sound:', error);
+      });
+      
+      // Highlight button khi đang phát
+      const soundBtns = document.querySelectorAll('.btn-sound-inline');
+      soundBtns.forEach(btn => btn.classList.add('playing'));
+      
+      this.audioPlayer.onended = () => {
+        soundBtns.forEach(btn => btn.classList.remove('playing'));
+      };
+      
+    } catch (error) {
+      console.error('Error playing sound:', error);
+      alert('Cannot play sound file!');
+    }
+  }
+
+  updateView() {
+    const container = document.getElementById('study-mode');
+    container.innerHTML = this.renderCard();
+  }
 }
